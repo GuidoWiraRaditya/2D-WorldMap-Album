@@ -24,7 +24,7 @@ export default function WorldMap() {
                 const cityNames = await response.json();
 
                 //fetch coordinates via API
-                const coordinates= await Promise.all(
+                const coordinates = await Promise.all(
                     cityNames.map(async (city) => {
                         try {
                             const response = await fetch(
@@ -45,7 +45,7 @@ export default function WorldMap() {
                     })
                 );
                 //remove marker for null results
-                setCityMarkers(coordinates.filter((marker) => marker !==null));
+                setCityMarkers(coordinates.filter((marker) => marker !== null));
             } catch (error) {
                 console.error("Error loading city data:", error);
             }
@@ -55,7 +55,7 @@ export default function WorldMap() {
     }, []);
 
     return (
-        <MapContainer center={[20,0]} zoom={2} style={{ height: "100vh", width: "100vw"}} zoomControl={false} maxBounds={[[85, -180], [-85, 180]]} maxBoundsViscosity={1.0} minZoom={2}>
+        <MapContainer center={[20, 0]} zoom={2} style={{ height: "100vh", width: "100vw" }} zoomControl={false} maxBounds={[[85, -180], [-85, 180]]} maxBoundsViscosity={1.0} minZoom={2}>
             <TileLayer
                 url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
                 attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
@@ -68,7 +68,7 @@ export default function WorldMap() {
             ))}
 
             <ZoomControl position="bottomright" />
-            
+
         </MapContainer>
     )
 }
