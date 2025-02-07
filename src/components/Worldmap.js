@@ -1,8 +1,9 @@
 import { useEffect, useState } from "react";
-import { MapContainer, TileLayer, Marker, Popup } from "react-leaflet";
+import { MapContainer, TileLayer, Marker, Popup, ZoomControl } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 
+//Custom Icon can be configured using your own png file
 const customIcon = new L.Icon({
     iconUrl: "https://unpkg.com/leaflet@1.7.1/dist/images/marker-icon.png",
     shadowUrl: "https://unpkg.com/leaflet@1.7.1/dist/images/marker-shadow.png",
@@ -13,53 +14,48 @@ const customIcon = new L.Icon({
 });
 
 export default function WorldMap() {
-    const [cityNames, setCityNames] = useState([]);
     const [cityMarkers, setCityMarkers] = useState([]);
 
-    //get country name from json file in public folder
-    useEffect(() =>{
-        const loadCityNames = async () =>{
+    //fetch city markers based on name stored in json file    
+    useEffect(() => {
+        const fetchCityMarkers = async () => {
             try {
-                const response = await fetch ("/cities.json");
-                const data = await response.json();
-                setCityNames(data);
+                const response = await fetch("/cities.json");
+                const cityNames = await response.json();
+
+                //fetch coordinates via API
+                const coordinates= await Promise.all(
+                    cityNames.map(async (city) => {
+                        try {
+                            const response = await fetch(
+                                `https://nominatim.openstreetmap.org/search?city=${encodeURIComponent(city)}&format=json&limit=1`
+                            );
+                            const data = await response.json();
+                            if (data.length > 0) {
+                                return {
+                                    name: city,
+                                    lat: parseFloat(data[0].lat),
+                                    lng: parseFloat(data[0].lon),
+                                };
+                            }
+                        } catch (error) {
+                            console.error(`Error fetching coordinates for ${city}:`, error);
+                        }
+                        return null;
+                    })
+                );
+                //remove marker for null results
+                setCityMarkers(coordinates.filter((marker) => marker !==null));
             } catch (error) {
-                console.error("Error loading json file", error);
+                console.error("Error loading city data:", error);
             }
         };
-        loadCityNames();
+
+        fetchCityMarkers();
     }, []);
 
-    useEffect(() => {
-        if (cityNames.length === 0) return;
-
-        const fetchCoordinates = async () => {
-            const markers = [];
-            for (const city of cityNames) {
-                try {
-                    const response = await fetch(
-                        `https://nominatim.openstreetmap.org/search?city=${encodeURIComponent(city)}&format=json&limit=1`
-                    );
-                    const data = await response.json();
-                    if ( data.length > 0) {
-                        markers.push({
-                            name: city,
-                            lat: parseFloat(data[0].lat),
-                            lng: parseFloat(data[0].lon),
-                        });
-                    }
-                } catch (error) {
-                    console.error(`Error fetching coordinates for city : ${city} reason :`, error);
-                }
-            }
-            setCityMarkers(markers);
-        };
-
-        fetchCoordinates();
-    }, [cityNames]);
-
     return (
-        <MapContainer center={[20,0]} zoom={2} style={{ height: "100vh", width: "100vw"}}>
+        <MapContainer center={[20,0]} zoom={2} style={{ height: "100vh", width: "100vw"}} zoomControl={false}>
             <TileLayer
                 url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
                 attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
@@ -70,6 +66,8 @@ export default function WorldMap() {
                     <Popup>{city.name}</Popup>
                 </Marker>
             ))}
+
+            <ZoomControl position="bottomright" />
             
         </MapContainer>
     )
